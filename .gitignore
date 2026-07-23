@@ -1,0 +1,8 @@
+config.php
+vendor/
+uploads/attachments/*
+uploads/assets/*
+!uploads/attachments/.gitkeep
+!uploads/assets/.gitkeep
+*.log
+.env

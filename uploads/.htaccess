@@ -1,0 +1,20 @@
+# Disable PHP execution in uploads directory
+<IfModule mod_php.c>
+    php_flag engine off
+</IfModule>
+<IfModule mod_php7.c>
+    php_flag engine off
+</IfModule>
+<IfModule mod_php8.c>
+    php_flag engine off
+</IfModule>
+
+# Prevent all script execution
+Options -ExecCGI
+AddHandler cgi-script .php .phtml .php3 .php4 .php5 .phps .phar .pl .py .pyc .pyo .jsp .asp .aspx .sh .bat .cmd .exe .msi
+
+# Deny access to all file types except allowed ones
+<FilesMatch "\.(php|phtml|php3|php4|php5|phps|phar|pl|py|pyc|pyo|jsp|asp|aspx|sh|bat|cmd|exe|msi|jar)$">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>

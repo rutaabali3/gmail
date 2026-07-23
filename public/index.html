@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Email Campaign Tool</title>
+  <!-- Bootstrap 5 (grid & utilities only) -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Roboto font -->
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <!-- Material Symbols -->
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
+  <!-- MD3 Theme -->
+  <link rel="stylesheet" href="md3-theme.css">
+</head>
+<body>
+
+  <!-- ── Top App Bar (MD3) ───────────────────────────── -->
+  <header class="app-header">
+    <div class="app-header-title">
+      <span class="material-symbols-outlined">mail</span>
+      Campaign Mailer
+    </div>
+    <nav>
+      <button data-screen="campaigns" class="active">Campaigns</button>
+      <button data-screen="templates">Templates</button>
+      <button data-screen="contacts">Contacts</button>
+      <button data-screen="settings">Settings</button>
+    </nav>
+  </header>
+
+  <!-- ── FAB: New Campaign ───────────────────────────── -->
+  <button id="campaign-create-btn" class="md-fab" title="New Campaign">
+    <span class="material-symbols-outlined">add</span>
+  </button>
+
+  <!-- ── Main Content ────────────────────────────────── -->
+  <div class="main-container container py-4">
+
+    <!-- ════════════════════════════════════════════════ -->
+    <!-- CAMPAIGNS LIST SCREEN                           -->
+    <!-- ════════════════════════════════════════════════ -->
+    <div id="screen-campaigns" class="screen active">
+      <div class="d-flex align-items-center justify-content-between mb-4">
+        <h2 class="mb-0">Campaigns</h2>
+      </div>
+      <div id="campaigns-list" class="card-grid"></div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════ -->
+    <!-- CAMPAIGN DETAIL SCREEN                          -->
+    <!-- ════════════════════════════════════════════════ -->
+    <div id="screen-campaign-detail-screen" class="screen">
+      <div id="campaign-detail" class="hidden">
+        <div class="d-flex align-items-center gap-3 mb-4">
+          <button id="campaign-back-btn" class="btn">
+            <span class="material-symbols-outlined">arrow_back</span>
+            Back
+          </button>
+          <span id="campaign-detail-name" class="fs-5 fw-medium" style="color:var(--md-sys-color-on-surface);"></span>
+          <span id="campaign-status-badge" class="badge badge-draft"></span>
+        </div>
+
+        <!-- Configuration -->
+        <div class="glass mb-4">
+          <h3>Configuration</h3>
+          <div class="row g-3">
+            <div class="col-md-4">
+              <div class="md-field md-field-filled">
+                <select id="campaign-template" class="md-field-input">
+                  <option value=""> </option>
+                </select>
+                <label for="campaign-template" class="md-field-label">Template</label>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="md-field md-field-filled">
+                <select id="campaign-smtp" class="md-field-input">
+                  <option value=""> </option>
+                </select>
+                <label for="campaign-smtp" class="md-field-label">SMTP Account</label>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="md-field md-field-filled">
+                <input type="number" id="campaign-delay" min="500" step="100" value="1500" placeholder=" " class="md-field-input">
+                <label for="campaign-delay" class="md-field-label">Delay (ms)</label>
+              </div>
+            </div>
+          </div>
+          <input type="hidden" id="campaign-manage-id">
+          <button id="campaign-save-config-btn" class="btn btn-primary mt-2">Save Config</button>
+        </div>
+
+        <!-- Attachments -->
+        <div class="glass mb-4">
+          <h3>Attachments</h3>
+          <div id="attachment-list" class="attachment-list mb-3"></div>
+          <div class="d-flex gap-3 align-items-center">
+            <input type="file" id="attachment-file" multiple style="max-width:280px;">
+            <button id="attachment-upload-btn" class="btn btn-primary">
+              <span class="material-symbols-outlined">upload</span>
+              Upload
+            </button>
+          </div>
+        </div>
+
+        <!-- Send Control -->
+        <div class="glass mb-4">
+          <div class="d-flex align-items-center justify-content-between mb-3">
+            <h3 class="mb-0">Send Control</h3>
+            <div class="d-flex gap-2">
+              <button id="campaign-start-btn" class="btn btn-success">
+                <span class="material-symbols-outlined">play_arrow</span>
+                Start
+              </button>
+              <button id="campaign-pause-btn" class="btn btn-warning hidden">
+                <span class="material-symbols-outlined">pause</span>
+                Pause
+              </button>
+              <button id="campaign-stop-btn" class="btn btn-danger hidden">
+                <span class="material-symbols-outlined">stop</span>
+                Stop
+              </button>
+            </div>
+          </div>
+          <div class="d-flex gap-4 mb-2 text-sm">
+            <span>Total: <strong id="campaign-count-total">0</strong></span>
+            <span>Pending: <strong id="campaign-count-pending">0</strong></span>
+            <span class="badge badge-sent">Sent: <strong id="campaign-count-sent">0</strong></span>
+            <span class="badge badge-failed">Failed: <strong id="campaign-count-failed">0</strong></span>
+            <span class="badge badge-skipped">Skipped: <strong id="campaign-count-skipped">0</strong></span>
+          </div>
+          <div class="progress-container">
+            <div id="campaign-progress" class="progress-bar" style="width:0%"></div>
+          </div>
+        </div>
+
+        <!-- Send Log -->
+        <div class="glass">
+          <h3>Send Log</h3>
+          <div id="campaign-log" class="send-log"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════ -->
+    <!-- TEMPLATES SCREEN                                -->
+    <!-- ════════════════════════════════════════════════ -->
+    <div id="screen-templates" class="screen">
+      <div class="d-flex align-items-center justify-content-between mb-4">
+        <h2 class="mb-0">Templates</h2>
+        <button id="template-new-btn" class="btn btn-primary">
+          <span class="material-symbols-outlined">add</span>
+          New Template
+        </button>
+      </div>
+      <div id="templates-list" class="card-grid"></div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════ -->
+    <!-- CONTACTS SCREEN                                 -->
+    <!-- ════════════════════════════════════════════════ -->
+    <div id="screen-contacts" class="screen">
+      <h2 class="mb-4">Contacts</h2>
+
+      <!-- Add single contact -->
+      <div class="glass mb-4">
+        <h3>Add Contact</h3>
+        <div class="row g-3 align-items-end">
+          <div class="col">
+            <div class="md-field md-field-filled">
+              <input type="email" id="contact-email" placeholder=" " class="md-field-input">
+              <label for="contact-email" class="md-field-label">Email</label>
+            </div>
+          </div>
+          <div class="col">
+            <div class="md-field md-field-filled">
+              <input type="text" id="contact-name" placeholder=" " class="md-field-input">
+              <label for="contact-name" class="md-field-label">Name</label>
+            </div>
+          </div>
+          <div class="col-auto">
+            <button id="contact-add-btn" class="btn btn-primary">Add</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- CSV Import -->
+      <div class="glass mb-4">
+        <h3>Import CSV</h3>
+        <p class="text-sm text-muted mb-3">CSV must have <code>email</code> and optionally <code>name</code> columns.</p>
+        <div class="d-flex flex-column gap-2">
+          <input type="file" id="csv-file" accept=".csv,.txt" style="max-width:360px;">
+          <div id="csv-preview" class="csv-preview hidden"></div>
+          <button id="csv-import-btn" class="btn btn-primary hidden" style="align-self:flex-start;">
+            <span class="material-symbols-outlined">upload_file</span>
+            Import Contacts
+          </button>
+        </div>
+      </div>
+
+      <!-- Contacts List -->
+      <div class="glass">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+          <h3 class="mb-0">All Contacts</h3>
+          <span id="contacts-count" class="text-sm text-muted">0 contacts</span>
+        </div>
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr><th>Name</th><th>Email</th><th>Status</th><th>Created</th><th></th></tr>
+            </thead>
+            <tbody id="contacts-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════ -->
+    <!-- SETTINGS SCREEN (SMTP)                          -->
+    <!-- ════════════════════════════════════════════════ -->
+    <div id="screen-settings" class="screen">
+      <div class="d-flex align-items-center justify-content-between mb-4">
+        <h2 class="mb-0">SMTP Accounts</h2>
+        <button id="smtp-new-btn" class="btn btn-primary">
+          <span class="material-symbols-outlined">add</span>
+          Add Account
+        </button>
+      </div>
+
+      <div class="glass">
+        <p class="text-sm text-muted mb-3">Gmail App Passwords require 2FA enabled. Generate at <a href="https://myaccount.google.com/apppasswords" target="_blank">myaccount.google.com/apppasswords</a>.</p>
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr><th>Label</th><th>Email</th><th>Daily Limit</th><th>Created</th><th></th></tr>
+            </thead>
+            <tbody id="smtp-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /main-container -->
+
+  <!-- ══════════════════════════════════════════════════ -->
+  <!-- MODALS (MD3 Dialogs)                              -->
+  <!-- ══════════════════════════════════════════════════ -->
+
+  <!-- Template Editor -->
+  <div id="template-modal" class="modal-overlay">
+    <div class="modal">
+      <h2 id="template-modal-title">Template</h2>
+      <input type="hidden" id="template-id">
+      <div class="md-field md-field-filled">
+        <input type="text" id="template-name" placeholder=" " class="md-field-input">
+        <label for="template-name" class="md-field-label">Name</label>
+      </div>
+      <div class="md-field md-field-filled">
+        <input type="text" id="template-subject" placeholder=" " class="md-field-input">
+        <label for="template-subject" class="md-field-label">Subject Line</label>
+      </div>
+      <div class="md-field md-field-filled">
+        <select id="template-asset-picker" class="md-field-input">
+          <option value=""> </option>
+        </select>
+        <label for="template-asset-picker" class="md-field-label">Insert Asset</label>
+      </div>
+      <div class="md-field md-field-filled">
+        <textarea id="template-body" rows="8" placeholder=" " class="md-field-input"></textarea>
+        <label for="template-body" class="md-field-label">Body HTML (inline styles only)</label>
+      </div>
+      <p class="text-sm text-muted mb-3">Use <code>{{name}}</code> and <code>{{email}}</code> as placeholders. All styles must be inline.</p>
+      <div class="modal-actions">
+        <button class="btn btn-outline-secondary" onclick="closeModal()">Cancel</button>
+        <button id="template-save-btn" class="btn btn-primary">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SMTP Account Form -->
+  <div id="smtp-modal" class="modal-overlay">
+    <div class="modal">
+      <h2>Add SMTP Account</h2>
+      <div class="md-field md-field-filled">
+        <input type="text" id="smtp-label" placeholder=" " class="md-field-input">
+        <label for="smtp-label" class="md-field-label">Label</label>
+      </div>
+      <div class="md-field md-field-filled">
+        <input type="email" id="smtp-email" placeholder=" " class="md-field-input">
+        <label for="smtp-email" class="md-field-label">Gmail Address</label>
+      </div>
+      <div class="md-field md-field-filled">
+        <input type="password" id="smtp-password" placeholder=" " class="md-field-input">
+        <label for="smtp-password" class="md-field-label">App Password</label>
+      </div>
+      <div class="md-field md-field-filled">
+        <input type="number" id="smtp-limit" value="400" min="1" placeholder=" " class="md-field-input">
+        <label for="smtp-limit" class="md-field-label">Daily Limit</label>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-outline-secondary" onclick="closeModal()">Cancel</button>
+        <button id="smtp-save-btn" class="btn btn-primary">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SweetAlert2 + App JS -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="app.js"></script>
+</body>
+</html>
