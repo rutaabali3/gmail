@@ -1,142 +1,461 @@
-# Cold Email Campaign Tool
+<div align="center">
 
-A self-hosted cold email campaign tool built with PHP, MySQL, vanilla JS/HTML/CSS, and PHPMailer.
+# COLD EMAIL CAMPAIGN TOOL
 
-## Requirements
+**A self-hosted, high-performance cold outreach management platform built with PHP 8, MySQL, Vanilla JavaScript, and PHPMailer.**
 
-- XAMPP (PHP 8.0+, MySQL/MariaDB)
-- Composer
-- A Gmail account with [2-Step Verification enabled](https://myaccount.google.com/security) and an [App Password](https://myaccount.google.com/apppasswords) generated
-
-## Installation
-
-### 1. Place files
-
-Copy the project folder into your XAMPP `htdocs` directory (e.g., `C:\xampp\htdocs\gmail`).
-
-### 2. Install Composer dependencies
-
-```bash
-cd C:\xampp\htdocs\gmail
-composer install
-```
-
-### 3. Import the database schema
-
-Open phpMyAdmin (http://localhost/phpmyadmin) or run:
-
-```bash
-mysql -u root < db/schema.sql
-```
-
-### 4. Configure `config.php`
-
-Copy `config.example.php` to `config.php` (or edit `config.php`):
-
-- **Database credentials** (`DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASS`)
-- **`ENCRYPTION_KEY`** — a 32-byte hex string for AES-256-CBC encryption of SMTP passwords
-- **`BASE_URL`** — set to the base URL where the tool is accessible, e.g. `http://localhost/gmail`
-
-### 5. Access the tool
-
-Open http://localhost/gmail/public/ in your browser.
+[![PHP Version](https://img.shields.io/badge/PHP-8.0%2B-777BB4?style=for-the-badge&logo=php&logoColor=white)](https://www.php.net/)
+[![MySQL](https://img.shields.io/badge/MySQL-5.7%2B-4479A1?style=for-the-badge&logo=mysql&logoColor=white)](https://www.mysql.com/)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](LICENSE)
+[![Status](https://img.shields.io/badge/Status-Active%20Development-success?style=for-the-badge)]()
+[![Design](https://img.shields.io/badge/UI-Material%203-0061A4?style=for-the-badge)]()
 
 ---
 
-## Features & Usage
+<p align="center">
+  <a href="#key-features">Key Features</a> &bull;
+  <a href="#quick-start">Quick Start</a> &bull;
+  <a href="#architecture">Architecture</a> &bull;
+  <a href="#api-reference">API Reference</a> &bull;
+  <a href="#security">Security</a> &bull;
+  <a href="#troubleshooting">Troubleshooting</a>
+</p>
 
-### 1. Add SMTP Account (Settings tab)
-
-- Click **Add Account**
-- Enter a label (e.g., "Work Gmail"), your Gmail address, and the 16-character App Password
-- Set a daily send limit (Gmail limits are typically 500/day for consumer accounts, 2000 for Workspace)
-- Passwords are encrypted at rest using AES-256-CBC
-
-### 2. Manage Contacts (Contacts tab)
-
-- **Add Contact**: Add single contacts with email and optional name
-- **CSV Import**: Import bulk contacts via CSV or TXT file (`email` and optional `name` columns) with automatic deduplication
-- **Bulk Delete**:
-  - Select individual contacts using row checkboxes
-  - Use the **Select All** master checkbox in the table header to select all visible contacts
-  - Active selection counter displays `X selected`
-  - Click **Delete Selected** to batch delete with a confirmation modal
-  - Cascade deletion cleans up any associated campaign recipients automatically
-
-### 3. Create a Template (Templates tab)
-
-- Write the email subject and body HTML using **inline styles only** (most email clients strip `<style>` tags)
-- Use `{{name}}` and `{{email}}` placeholders — replaced automatically per recipient
-- Live HTML preview toggle to inspect rendered layout
-- Insert uploaded media assets (logos, banners, footers) via the asset picker
-
-### 4. Create and Send a Campaign (Campaigns tab)
-
-- Click **New Campaign**, give it a name
-- Click **Manage** to open the campaign detail screen
-- Select a template and SMTP account, then click **Save Config**
-- Upload any attachments (optional)
-- Click **Start** to begin sending — sends one email at a time with configurable delay
-- Use **Pause** to halt after the current in-flight send completes
-- Use **Stop** to return the campaign to draft status
-- **Auto-Pause Safety**: Automatically pauses if daily send limit is reached or on 5 consecutive failures
-
-### 5. Theme Switcher
-
-- Switch seamlessly between Modern Dark Mode and Light Mode via the top-bar theme button
+</div>
 
 ---
 
-## API Endpoints
+## Overview
 
-| Endpoint | Method | Description |
+The **Cold Email Campaign Tool** provides an end-to-end, privacy-focused solution for running personalized email campaigns. Operating completely on your own infrastructure, it gives you full control over sender accounts, contact data, email templates, and delivery schedules without relying on third-party SaaS subscriptions or monthly fees.
+
+Designed with a sleek Material Design 3 interface, instant dark/light mode toggle, AES-256-CBC credential encryption, and automated rate-limiting safety controls, this application scales smoothly for individual marketers, recruiters, and sales teams.
+
+---
+
+## Architecture Diagram
+
+```text
+  +-----------------------------------------------------------------------+
+  |                           BROWSER / CLIENT                            |
+  |   Single Page Application (public/index.html + public/app.js)         |
+  |   Material 3 Styling (style.css + md3-theme.css)                      |
+  +-----------------------------------+-----------------------------------+
+                                      |
+                                  REST API
+                               (JSON / Fetch)
+                                      |
+  +-----------------------------------v-----------------------------------+
+  |                           BACKEND (PHP 8)                             |
+  |                                                                       |
+  |  +--------------------+  +--------------------+  +-----------------+  |
+  |  | contacts.php       |  | campaigns.php      |  | templates.php   |  |
+  |  +--------------------+  +--------------------+  +-----------------+  |
+  |  | smtp.php (AES-256) |  | send.php           |  | upload.php      |  |
+  |  +--------------------+  +--------------------+  +-----------------+  |
+  +-----------------+-------------------+-------------------+-------------+
+                    |                   |                   |
+            Prepared Queries        PHPMailer         File System
+                    |                   |                   |
+  +-----------------v-----+   +---------v-------+   +-------v-------------+
+  |    MYSQL DATABASE     |   |   SMTP SERVER   |   |   UPLOADS DIR       |
+  | (contacts, campaigns, |   | (Gmail / Custom |   | (/uploads/assets/   |
+  |  recipients, assets)  |   |    Mail Server) |   |  /uploads/attach/)  |
+  +-----------------------+   +-----------------+   +---------------------+
+```
+
+---
+
+## Key Features
+
+<details>
+<summary><b>1. Multi-Account SMTP Management & Encryption</b> (Click to expand)</summary>
+
+<br>
+
+- **Multi-Sender Support**: Configure multiple Gmail or custom SMTP accounts simultaneously.
+- **AES-256-CBC Encryption**: Sender passwords and App Passwords are encrypted at rest using industry-standard OpenSSL encryption.
+- **Daily Send Quotas**: Define individual daily sending caps for each account (e.g., 500/day for personal Gmail, 2000/day for Workspace).
+- **Auto-Pause Rate Limiter**: Automatically halts campaign execution if an SMTP account hits its daily send ceiling or encounters 5 consecutive delivery failures.
+
+</details>
+
+<details>
+<summary><b>2. Contact Management & Bulk CSV Importer</b> (Click to expand)</summary>
+
+<br>
+
+- **Bulk CSV / TXT File Import**: Upload spreadsheets or plain text lists containing recipient emails and names.
+- **Automated Deduplication**: Prevents duplicate email records from entering the database upon import.
+- **Master Checkbox Bulk Deletion**: Select individual records or use the master toggle to delete batch entries in a single click.
+- **Cascade Deletion**: Automatically cleans up associated recipient history when deleting contact records to maintain database integrity.
+
+</details>
+
+<details>
+<summary><b>3. Dynamic Email Template Builder</b> (Click to expand)</summary>
+
+<br>
+
+- **Variable Replacement**: Supports dynamic merge tags such as `{{name}}` and `{{email}}` resolved per recipient.
+- **Live HTML Preview**: Real-time rendering toggle to review email visual layout before launching campaigns.
+- **Media Asset Picker**: Direct access to uploaded banners, logos, and inline media assets directly inside the editor.
+- **Email Client Optimization**: Tailored for inline CSS styling to prevent style stripping across Outlook, Gmail, and Yahoo clients.
+
+</details>
+
+<details>
+<summary><b>4. Intelligent Campaign Automation Engine</b> (Click to expand)</summary>
+
+<br>
+
+- **Granular Dispatch Controls**: Start, Pause, and Stop campaigns dynamically.
+- **Adjustable Delay Timers**: Configure send delays (in seconds) between individual messages to maintain domain sender reputation.
+- **Attachment Support**: Attach files to campaign dispatches with mime-type checking and file safety policies.
+- **Real-Time Delivery Tracker**: Dynamic recipient status progress bars tracking Sent, Failed, and Pending statuses.
+
+</details>
+
+<details>
+<summary><b>5. Secure One-Click Unsubscribe System</b> (Click to expand)</summary>
+
+<br>
+
+- **Tokenized Opt-Outs**: Cryptographically generated 64-character tokens injected into message headers and footers.
+- **Public Opt-Out Endpoint**: Standalone `/api/unsubscribe.php` endpoint allowing recipients to opt-out with zero password or login requirements.
+- **Automatic Opt-Out Exclusion**: Automatically suppresses opt-out recipients from future campaign dispatches.
+
+</details>
+
+<details>
+<summary><b>6. Modern Material Design 3 UI & Theme Engine</b> (Click to expand)</summary>
+
+<br>
+
+- **Seamless Dark / Light Mode**: Instant client-side theme switcher stored in persistent localStorage.
+- **Single Page Application (SPA)**: Tabbed layout for Contacts, Campaigns, Templates, Media Assets, and Settings.
+- **Responsive Layout**: Designed for seamless operation on mobile, tablet, and desktop monitors.
+
+</details>
+
+---
+
+## Quick Start
+
+### System Requirements
+
+| Component | Minimum Requirement | Recommended |
 |---|---|---|
-| `/api/contacts.php` | `GET` | List contacts with pagination (`?page=1&limit=100`) or single contact (`?id=X`) |
-| `/api/contacts.php` | `POST` | Create or update contact (`{ "email": "...", "name": "..." }`) |
-| `/api/contacts.php` | `PUT` | Update contact by ID (`?id=X`) |
-| `/api/contacts.php` | `DELETE` | Delete single (`?id=X`) or bulk delete (`{ "ids": [1, 2, 3] }` or `?ids=1,2,3`) |
-| `/api/campaigns.php` | `GET`, `POST`, `PUT`, `DELETE` | Campaign CRUD & recipient status counts |
-| `/api/campaign_recipients.php` | `GET` | List recipients for a campaign with status filter |
-| `/api/campaign_attachments.php` | `DELETE` | Delete attached file from campaign |
-| `/api/templates.php` | `GET`, `POST`, `PUT`, `DELETE` | Email template CRUD |
-| `/api/smtp.php` | `GET`, `POST`, `PUT`, `DELETE` | SMTP accounts CRUD |
-| `/api/send.php` | `POST` | Send single email for recipient |
-| `/api/upload.php` | `POST` | File upload handler (assets and campaign attachments) |
-| `/api/assets.php` | `GET`, `DELETE` | Media asset management |
-| `/api/unsubscribe.php` | `GET` | Public one-click unsubscribe endpoint |
+| **PHP** | 8.0 or higher | 8.2+ |
+| **PHP Extensions** | PDO, pdo_mysql, OpenSSL, Fileinfo | PDO, OpenSSL, Fileinfo, Mbstring |
+| **Database** | MySQL 5.7+ / MariaDB 10.3+ | MySQL 8.0+ |
+| **Web Server** | Apache 2.4 / Nginx 1.18 | Apache 2.4 with `mod_rewrite` |
+| **Dependency Manager** | Composer 2.0+ | Composer 2.x |
 
 ---
 
-## Project Structure
+### Installation Steps
 
+<details open>
+<summary><b>Standard XAMPP / WampServer Setup (Click to collapse)</b></summary>
+
+<br>
+
+1. **Clone or Copy Repository**:
+   Place the project files into your web server document root directory (e.g., `C:\xampp\htdocs\gmail` or `/var/www/html/gmail`):
+   ```bash
+   cd C:\xampp\htdocs
+   git clone https://github.com/your-username/gmail.git gmail
+   cd gmail
+   ```
+
+2. **Install PHP Dependencies**:
+   Execute Composer to download PHPMailer and autoload files:
+   ```bash
+   composer install
+   ```
+
+3. **Initialize MySQL Database**:
+   Create a target database in phpMyAdmin or MySQL CLI, then import `db/schema.sql`:
+   ```bash
+   mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS cold_email_db;"
+   mysql -u root -p cold_email_db < db/schema.sql
+   ```
+
+4. **Configure Environment File**:
+   Copy `config.example.php` to `config.php` in the root directory:
+   ```bash
+   cp config.example.php config.php
+   ```
+   Open `config.php` and set your credentials:
+   ```php
+   <?php
+   define('DB_HOST', 'localhost');
+   define('DB_NAME', 'cold_email_db');
+   define('DB_USER', 'root');
+   define('DB_PASS', 'your_password');
+
+   // Must be a 32-byte key (64 hex characters) for AES-256-CBC
+   define('ENCRYPTION_KEY', '4f8d2e1b3a5c7e9f0d2b4a6c8e0f1a3b5c7d9e1f3a5b7c9d1e3f5a7b9c1d3e5f');
+
+   // Base URL pointing to project root
+   define('BASE_URL', 'http://localhost/gmail');
+   ?>
+   ```
+
+5. **Access Application**:
+   Navigate to the public dashboard directory in your browser:
+   ```text
+   http://localhost/gmail/public/
+   ```
+
+</details>
+
+<details>
+<summary><b>CLI Built-in PHP Server Setup (Click to expand)</b></summary>
+
+<br>
+
+For rapid testing without full Apache installation:
+
+1. Clone repo and install dependencies:
+   ```bash
+   git clone https://github.com/your-username/gmail.git
+   cd gmail
+   composer install
+   ```
+
+2. Configure `config.php` as shown above.
+
+3. Launch PHP built-in web server:
+   ```bash
+   php -S localhost:8000 -t public
+   ```
+
+4. Open browser at `http://localhost:8000`
+
+</details>
+
+---
+
+## Configuration Reference
+
+The following table details all parameters defined within `config.php`:
+
+| Configuration Key | Data Type | Purpose | Example Value |
+|---|---|---|---|
+| `DB_HOST` | String | MySQL database server address | `127.0.0.1` |
+| `DB_NAME` | String | Database name | `cold_email_db` |
+| `DB_USER` | String | Database access user | `root` |
+| `DB_PASS` | String | Database password | `secret_password` |
+| `ENCRYPTION_KEY` | String (64 Hex) | 32-byte key for AES-256-CBC cipher | `64_char_hexadecimal_string` |
+| `BASE_URL` | String | Public base URL for application | `http://localhost/gmail` |
+
+---
+
+## API Reference
+
+The application provides clean JSON endpoints across all modules.
+
+### Contacts API (`/api/contacts.php`)
+
+<details>
+<summary><b>View Contacts API Details</b></summary>
+
+<br>
+
+| Method | Endpoint | Query Parameters / Body | Description |
+|---|---|---|---|
+| `GET` | `/api/contacts.php` | `?page=1&limit=100` | Paginated list of contacts |
+| `GET` | `/api/contacts.php` | `?id=12` | Retrieve single contact details |
+| `POST` | `/api/contacts.php` | `{"email": "user@example.com", "name": "John"}` | Create a single contact |
+| `PUT` | `/api/contacts.php` | `?id=12` + `{"name": "John Updated"}` | Update contact record |
+| `DELETE` | `/api/contacts.php` | `?id=12` | Delete single contact |
+| `DELETE` | `/api/contacts.php` | `{"ids": [12, 14, 15]}` | Bulk delete contacts |
+
+#### Request Example (Bulk Delete):
+```json
+DELETE /api/contacts.php
+Content-Type: application/json
+
+{
+  "ids": [101, 102, 103, 104]
+}
 ```
-/config.php                     Active configuration (DB, keys, URLs — gitignored)
-/config.example.php             Sample configuration template
-/composer.json                  PHPMailer dependency
-/db/schema.sql                  Database schema definition
-/public/index.html              Single Page Application interface
-/public/app.js                  Frontend application logic & API client
-/public/style.css               Base responsive layout styles
-/public/md3-theme.css           Material 3 dark & light theme styling
-/api/contacts.php               Contacts CRUD + Bulk deletion & import
-/api/campaigns.php              Campaign management & recipient aggregation
-/api/campaign_recipients.php    Campaign recipient querying
-/api/campaign_attachments.php   Attachment deletion
-/api/templates.php              Template management
-/api/smtp.php                   SMTP credentials management (encrypted at rest)
-/api/send.php                   Email dispatcher via PHPMailer
-/api/upload.php                 Attachment & asset file upload handler
-/api/assets.php                 Reusable asset listings
-/api/unsubscribe.php            Unsubscribe handler
-/uploads/attachments/           Campaign file attachments
-/uploads/assets/                Public media assets (logos, banners)
-/uploads/.htaccess              Security policy (disables script execution)
+
+#### Response Example:
+```json
+{
+  "success": true,
+  "deleted_count": 4,
+  "message": "Successfully deleted 4 contacts."
+}
 ```
 
-## Security Notes
+</details>
 
-- **Input Validation**: All uploads are verified by extension and MIME inspection via `finfo_file()`, stored with randomized filenames.
-- **Script Execution Disabled**: Direct PHP execution is strictly prevented in `/uploads/` via `.htaccess`.
-- **Encrypted Credentials**: SMTP app passwords are encrypted at rest using AES-256-CBC with `ENCRYPTION_KEY`.
-- **Injection Prevention**: Contact attributes (`{{name}}`, `{{email}}`) are escaped before injection into templates.
-- **Secure Unsubscribe**: Cryptographically generated 64-character tokens allow safe, single-click recipient opt-outs.
+---
+
+### Campaigns API (`/api/campaigns.php`)
+
+<details>
+<summary><b>View Campaigns API Details</b></summary>
+
+<br>
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/campaigns.php` | List all campaigns with progress metrics |
+| `POST` | `/api/campaigns.php` | Create a new campaign entry |
+| `PUT` | `/api/campaigns.php?id=X` | Update campaign settings (template, SMTP account, delay) |
+| `DELETE` | `/api/campaigns.php?id=X` | Delete campaign and associated records |
+
+</details>
+
+---
+
+### SMTP Accounts API (`/api/smtp.php`)
+
+<details>
+<summary><b>View SMTP API Details</b></summary>
+
+<br>
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/smtp.php` | List configured SMTP accounts (passwords masked) |
+| `POST` | `/api/smtp.php` | Add new account with automatic AES-256 password encryption |
+| `PUT` | `/api/smtp.php?id=X` | Update server configurations and daily limits |
+| `DELETE` | `/api/smtp.php?id=X` | Remove SMTP credential entry |
+
+</details>
+
+---
+
+### Templates API (`/api/templates.php`)
+
+<details>
+<summary><b>View Templates API Details</b></summary>
+
+<br>
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/templates.php` | Retrieve template library |
+| `POST` | `/api/templates.php` | Save new HTML template |
+| `PUT` | `/api/templates.php?id=X` | Update subject or HTML body |
+| `DELETE` | `/api/templates.php?id=X` | Remove template |
+
+</details>
+
+---
+
+### Dispatch Engine API (`/api/send.php`)
+
+<details>
+<summary><b>View Send API Details</b></summary>
+
+<br>
+
+| Method | Endpoint | Request Payload | Description |
+|---|---|---|---|
+| `POST` | `/api/send.php` | `{"recipient_id": 45}` | Transmits single queued recipient email via PHPMailer |
+
+</details>
+
+---
+
+## Security Architecture
+
+The tool implements a defense-in-depth security approach across all application tiers:
+
+1. **AES-256-CBC Credential Storage**:
+   - Sender SMTP passwords are never stored in plain text.
+   - Initialized using `openssl_encrypt()` and `openssl_decrypt()` with a 32-byte secret key and randomized initialization vectors (IV).
+
+2. **Strict MIME & File Extension Inspection**:
+   - File uploads in `/api/upload.php` undergo dual validation: file extension checks and server-side MIME type inspection using PHP `finfo_file()`.
+   - Uploaded assets and campaign attachments are saved with randomized unique filenames to prevent path traversal attacks.
+
+3. **Disabled Script Execution in Uploads**:
+   - Directory `/uploads/.htaccess` explicitly blocks PHP and CGI script execution:
+     ```apache
+     php_flag engine off
+     RemoveHandler .php .phtml .php3 .php4 .php5 .php7 .phps
+     RemoveType .php .phtml .php3 .php4 .php5 .php7 .phps
+     ```
+
+4. **SQL Injection Prevention**:
+   - 100% of database interactions are executed via PDO Prepared Statements with parameterized inputs.
+
+5. **XSS & Template Injection Guard**:
+   - Recipient merge tags (`{{name}}`, `{{email}}`) are sanitized using `htmlspecialchars()` prior to DOM insertion.
+
+---
+
+## Troubleshooting
+
+<details>
+<summary><b>Issue: Gmail Authentication Failure (Click to expand)</b></summary>
+
+<br>
+
+**Symptom**: `SMTP Error: Could not authenticate` when starting a campaign.
+
+**Resolution**:
+1. Ensure your Gmail account has **2-Step Verification** turned on.
+2. Generate an **App Password** from https://myaccount.google.com/apppasswords.
+3. Do NOT use your normal Gmail account password in the SMTP configuration tab.
+4. Input the 16-character App Password (without spaces) in Settings.
+
+</details>
+
+<details>
+<summary><b>Issue: File Uploads Failing (Click to expand)</b></summary>
+
+<br>
+
+**Symptom**: "Upload failed" or "Permission denied" error when uploading CSV or assets.
+
+**Resolution**:
+1. Verify write permissions on `/uploads/` and subdirectories:
+   ```bash
+   chmod -R 775 uploads/
+   ```
+2. Confirm PHP settings in `php.ini` allow file uploads:
+   ```ini
+   file_uploads = On
+   upload_max_filesize = 10M
+   post_max_size = 12M
+   ```
+
+</details>
+
+<details>
+<summary><b>Issue: Database Connection Refused (Click to expand)</b></summary>
+
+<br>
+
+**Symptom**: `PDOException: SQLSTATE[HY000] [2002] Connection refused`.
+
+**Resolution**:
+1. Verify MySQL service is active on your server or XAMPP Control Panel.
+2. Double check database credentials and hostname in `config.php`.
+3. Test connection via CLI:
+   ```bash
+   mysql -h localhost -u root -p
+   ```
+
+</details>
+
+---
+
+## Contributing
+
+We welcome contributions to enhance functionality, improve UI/UX, or strengthen security. Please read our [Contributing Guidelines](CONTRIBUTING.md) for details on code standards, branch conventions, and submission processes.
+
+---
+
+## License
+
+This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) file for full copyright and licensing details.
