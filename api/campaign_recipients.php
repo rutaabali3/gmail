@@ -28,8 +28,7 @@ if ($status) {
     $params[] = $status;
 }
 
-$sql .= ' ORDER BY cr.id ASC LIMIT ?';
-$params[] = $limit;
+$sql .= ' ORDER BY cr.id ASC LIMIT ' . (int)$limit;
 
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);

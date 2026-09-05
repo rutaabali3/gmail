@@ -68,15 +68,19 @@ if ($type === 'attachment') {
         'application/vnd.ms-powerpoint',
         'text/csv',
         'text/plain',
+        'application/csv',
+        'text/x-csv',
+        'application/x-csv',
         'image/png','image/jpeg','image/gif',
         'application/zip',
+        'application/x-zip',
         'application/x-zip-compressed',
     ];
     if (!in_array($mimeType, $allowedMimes)) {
         jsonResponse(['error' => 'File MIME type not allowed: ' . $mimeType], 400);
     }
 } else {
-    $imageMimes = ['image/png','image/jpeg','image/gif','image/webp','image/svg+xml'];
+    $imageMimes = ['image/png','image/jpeg','image/gif','image/webp','image/svg+xml','image/svg','image/x-icon'];
     if (!in_array($mimeType, $imageMimes)) {
         jsonResponse(['error' => 'Only image MIME types allowed for assets'], 400);
     }

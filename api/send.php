@@ -30,6 +30,7 @@ $stmt = $pdo->prepare('
         t.subject AS template_subject,
         t.body_html AS template_body,
         s.id AS smtp_id,
+        s.label AS smtp_label,
         s.email AS smtp_email,
         s.app_password_encrypted,
         s.daily_limit,
@@ -41,7 +42,7 @@ $stmt = $pdo->prepare('
     FROM campaign_recipients cr
     JOIN campaigns c ON cr.campaign_id = c.id
     LEFT JOIN templates t ON c.template_id = t.id
-    JOIN smtp_accounts s ON c.smtp_account_id = s.id
+    LEFT JOIN smtp_accounts s ON c.smtp_account_id = s.id
     JOIN contacts ct ON cr.contact_id = ct.id
     WHERE cr.id = ?
 ');
@@ -50,6 +51,10 @@ $row = $stmt->fetch();
 
 if (!$row) {
     jsonResponse(['error' => 'Recipient not found'], 404);
+}
+
+if (empty($row['smtp_id']) || empty($row['smtp_email'])) {
+    jsonResponse(['success' => false, 'error' => 'No SMTP account configured for this campaign']);
 }
 
 // Check campaign is still sending
@@ -87,21 +92,33 @@ if ($sentToday >= $row['daily_limit']) {
     jsonResponse(['success' => false, 'error' => 'Daily limit reached for this SMTP account']);
 }
 
+// Ensure contact has an unsubscribe token
+if (empty($row['unsubscribe_token'])) {
+    $newToken = bin2hex(random_bytes(32));
+    $pdo->prepare('UPDATE contacts SET unsubscribe_token = ? WHERE id = ?')->execute([$newToken, $row['contact_id']]);
+    $row['unsubscribe_token'] = $newToken;
+}
+
 // --- Build email ---
 $subject = $row['template_subject'] ?? '';
 $body    = $row['template_body'] ?? '';
 
-// Server-side placeholder substitution
-$replacements = [
-    '{{name}}'  => $row['contact_name'],
-    '{{email}}' => $row['contact_email'],
-];
-$subject = str_replace(array_keys($replacements), array_values($replacements), $subject);
-$body    = str_replace(array_keys($replacements), array_values($replacements), $body);
+// Plain-text replacements for subject
+$subject = str_replace(
+    ['{{name}}', '{{email}}'],
+    [$row['contact_name'], $row['contact_email']],
+    $subject
+);
 
-// HTML-escape name/email for safe HTML injection
+// HTML-escape name/email for safe HTML body injection
 $safeName  = htmlspecialchars($row['contact_name'], ENT_QUOTES, 'UTF-8');
 $safeEmail = htmlspecialchars($row['contact_email'], ENT_QUOTES, 'UTF-8');
+
+$body = str_replace(
+    ['{{name}}', '{{email}}'],
+    [$safeName, $safeEmail],
+    $body
+);
 
 // Add unsubscribe footer
 $unsubLink  = UNSUBSCRIBE_URL . '?token=' . urlencode($row['unsubscribe_token']);
@@ -124,12 +141,13 @@ try {
     $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
     $mail->Port       = 587;
 
-    $mail->setFrom($row['smtp_email'], 'Mailer');
+    $fromName = !empty($row['smtp_label']) ? $row['smtp_label'] : 'Mailer';
+    $mail->setFrom($row['smtp_email'], $fromName);
     $mail->addAddress($row['contact_email'], $safeName);
     $mail->Subject = $subject;
     $mail->isHTML(true);
     $mail->Body    = $body;
-    $mail->AltBody = strip_tags(str_replace(['<br>','<br />','<br/>','</p>'], "\n", $body));
+    $mail->AltBody = html_entity_decode(strip_tags(str_replace(['<br>','<br />','<br/>','</p>'], "\n", $body)), ENT_QUOTES, 'UTF-8');
 
     // Attachments
     $attStmt = $pdo->prepare('SELECT * FROM campaign_attachments WHERE campaign_id = ?');

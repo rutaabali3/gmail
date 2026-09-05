@@ -81,6 +81,12 @@ switch ($method) {
         $params[] = (int)$_GET['id'];
         $stmt = $pdo->prepare('UPDATE campaigns SET ' . implode(', ', $fields) . ' WHERE id = ?');
         $stmt->execute($params);
+
+        // Sync active contacts to campaign recipients if there are newly added contacts
+        $insStmt = $pdo->prepare('INSERT IGNORE INTO campaign_recipients (campaign_id, contact_id)
+                                  SELECT ?, id FROM contacts WHERE status = ?');
+        $insStmt->execute([(int)$_GET['id'], 'active']);
+
         jsonResponse(['success' => true]);
         break;
 
@@ -88,6 +94,14 @@ switch ($method) {
         if (empty($_GET['id'])) jsonResponse(['error' => 'id required'], 400);
         $pdo->beginTransaction();
         try {
+            // Delete attachment files from disk
+            $attStmt = $pdo->prepare('SELECT file_path FROM campaign_attachments WHERE campaign_id = ?');
+            $attStmt->execute([(int)$_GET['id']]);
+            foreach ($attStmt->fetchAll() as $att) {
+                $fullPath = __DIR__ . '/../' . $att['file_path'];
+                if (file_exists($fullPath)) @unlink($fullPath);
+            }
+
             $pdo->prepare('DELETE FROM campaign_attachments WHERE campaign_id = ?')->execute([(int)$_GET['id']]);
             $pdo->prepare('DELETE FROM campaign_recipients WHERE campaign_id = ?')->execute([(int)$_GET['id']]);
             $pdo->prepare('DELETE FROM campaigns WHERE id = ?')->execute([(int)$_GET['id']]);

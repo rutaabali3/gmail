@@ -12,12 +12,12 @@ A self-hosted cold email campaign tool built with PHP, MySQL, vanilla JS/HTML/CS
 
 ### 1. Place files
 
-Copy the project folder into your XAMPP `htdocs` directory (e.g., `C:\xampp\htdocs\bulk`).
+Copy the project folder into your XAMPP `htdocs` directory (e.g., `C:\xampp\htdocs\gmail`).
 
 ### 2. Install Composer dependencies
 
 ```bash
-cd C:\xampp\htdocs\bulk
+cd C:\xampp\htdocs\gmail
 composer install
 ```
 
@@ -31,78 +31,112 @@ mysql -u root < db/schema.sql
 
 ### 4. Configure `config.php`
 
-Copy or edit `config.php` and update:
+Copy `config.example.php` to `config.php` (or edit `config.php`):
 
-- **Database credentials** (`DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASS`) if different from the defaults
-- **`ENCRYPTION_KEY`** — change this to a random 32-byte hex string (you can generate one at https://www.random.org/cgi-bin/randbyte?format=h&nbytes=32)
-- **`BASE_URL`** — set to the base URL where the tool is accessible, e.g. `http://localhost/bulk`
+- **Database credentials** (`DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASS`)
+- **`ENCRYPTION_KEY`** — a 32-byte hex string for AES-256-CBC encryption of SMTP passwords
+- **`BASE_URL`** — set to the base URL where the tool is accessible, e.g. `http://localhost/gmail`
 
 ### 5. Access the tool
 
-Open http://localhost/bulk/public/ in your browser.
+Open http://localhost/gmail/public/ in your browser.
 
-## Usage
+---
+
+## Features & Usage
 
 ### 1. Add SMTP Account (Settings tab)
 
-- Click "Add Account"
+- Click **Add Account**
 - Enter a label (e.g., "Work Gmail"), your Gmail address, and the 16-character App Password
 - Set a daily send limit (Gmail limits are typically 500/day for consumer accounts, 2000 for Workspace)
+- Passwords are encrypted at rest using AES-256-CBC
 
-### 2. Add Contacts (Contacts tab)
+### 2. Manage Contacts (Contacts tab)
 
-- Add individually or import a CSV file with `email` and `name` columns
-- Duplicate emails are automatically skipped on re-import
+- **Add Contact**: Add single contacts with email and optional name
+- **CSV Import**: Import bulk contacts via CSV or TXT file (`email` and optional `name` columns) with automatic deduplication
+- **Bulk Delete**:
+  - Select individual contacts using row checkboxes
+  - Use the **Select All** master checkbox in the table header to select all visible contacts
+  - Active selection counter displays `X selected`
+  - Click **Delete Selected** to batch delete with a confirmation modal
+  - Cascade deletion cleans up any associated campaign recipients automatically
 
 ### 3. Create a Template (Templates tab)
 
 - Write the email subject and body HTML using **inline styles only** (most email clients strip `<style>` tags)
-- Use `{{name}}` and `{{email}}` as placeholders — these will be replaced per-recipient
-- Upload assets (logo/banner images) via the upload endpoint; they become available in the asset picker in the template editor
+- Use `{{name}}` and `{{email}}` placeholders — replaced automatically per recipient
+- Live HTML preview toggle to inspect rendered layout
+- Insert uploaded media assets (logos, banners, footers) via the asset picker
 
 ### 4. Create and Send a Campaign (Campaigns tab)
 
-- Click "New Campaign", give it a name
-- Click "Manage" to open the campaign detail screen
-- Select a template and SMTP account, then click "Save Config"
+- Click **New Campaign**, give it a name
+- Click **Manage** to open the campaign detail screen
+- Select a template and SMTP account, then click **Save Config**
 - Upload any attachments (optional)
-- Click **Start** to begin sending — the tool sends one email at a time with a configurable delay
+- Click **Start** to begin sending — sends one email at a time with configurable delay
 - Use **Pause** to halt after the current in-flight send completes
 - Use **Stop** to return the campaign to draft status
+- **Auto-Pause Safety**: Automatically pauses if daily send limit is reached or on 5 consecutive failures
 
-### Sending Loop
+### 5. Theme Switcher
 
-The frontend sends each email one at a time via `fetch()` to `/api/send.php`. The loop is resumable: if you reload the page and hit Start again, it only processes remaining `pending` recipients.
+- Switch seamlessly between Modern Dark Mode and Light Mode via the top-bar theme button
+
+---
+
+## API Endpoints
+
+| Endpoint | Method | Description |
+|---|---|---|
+| `/api/contacts.php` | `GET` | List contacts with pagination (`?page=1&limit=100`) or single contact (`?id=X`) |
+| `/api/contacts.php` | `POST` | Create or update contact (`{ "email": "...", "name": "..." }`) |
+| `/api/contacts.php` | `PUT` | Update contact by ID (`?id=X`) |
+| `/api/contacts.php` | `DELETE` | Delete single (`?id=X`) or bulk delete (`{ "ids": [1, 2, 3] }` or `?ids=1,2,3`) |
+| `/api/campaigns.php` | `GET`, `POST`, `PUT`, `DELETE` | Campaign CRUD & recipient status counts |
+| `/api/campaign_recipients.php` | `GET` | List recipients for a campaign with status filter |
+| `/api/campaign_attachments.php` | `DELETE` | Delete attached file from campaign |
+| `/api/templates.php` | `GET`, `POST`, `PUT`, `DELETE` | Email template CRUD |
+| `/api/smtp.php` | `GET`, `POST`, `PUT`, `DELETE` | SMTP accounts CRUD |
+| `/api/send.php` | `POST` | Send single email for recipient |
+| `/api/upload.php` | `POST` | File upload handler (assets and campaign attachments) |
+| `/api/assets.php` | `GET`, `DELETE` | Media asset management |
+| `/api/unsubscribe.php` | `GET` | Public one-click unsubscribe endpoint |
+
+---
 
 ## Project Structure
 
 ```
-/config.php                 DB + SMTP credentials, encryption key
-/composer.json              PHPMailer dependency
-/db/schema.sql              Database tables
-/public/index.html          Main UI
-/public/style.css           Dark glassmorphism theme
-/public/app.js              Frontend SPA logic
-/api/campaigns.php          Campaign CRUD
-/api/contacts.php           Contact CRUD + CSV import
-/api/templates.php          Template CRUD
-/api/assets.php             Asset list/delete
-/api/upload.php             Attachment + asset file upload
-/api/send.php               Send single email via PHPMailer
-/api/smtp.php               SMTP account CRUD
-/api/unsubscribe.php        Public unsubscribe endpoint
-/api/campaign_recipients.php   Recipient listing
-/api/campaign_attachments.php  Attachment delete
-/uploads/attachments/       Stored attachments (PHP disabled)
-/uploads/assets/            Stored images (publicly reachable)
-/uploads/.htaccess          Disables PHP execution in uploads
+/config.php                     Active configuration (DB, keys, URLs — gitignored)
+/config.example.php             Sample configuration template
+/composer.json                  PHPMailer dependency
+/db/schema.sql                  Database schema definition
+/public/index.html              Single Page Application interface
+/public/app.js                  Frontend application logic & API client
+/public/style.css               Base responsive layout styles
+/public/md3-theme.css           Material 3 dark & light theme styling
+/api/contacts.php               Contacts CRUD + Bulk deletion & import
+/api/campaigns.php              Campaign management & recipient aggregation
+/api/campaign_recipients.php    Campaign recipient querying
+/api/campaign_attachments.php   Attachment deletion
+/api/templates.php              Template management
+/api/smtp.php                   SMTP credentials management (encrypted at rest)
+/api/send.php                   Email dispatcher via PHPMailer
+/api/upload.php                 Attachment & asset file upload handler
+/api/assets.php                 Reusable asset listings
+/api/unsubscribe.php            Unsubscribe handler
+/uploads/attachments/           Campaign file attachments
+/uploads/assets/                Public media assets (logos, banners)
+/uploads/.htaccess              Security policy (disables script execution)
 ```
 
 ## Security Notes
 
-- All file uploads are validated by extension, MIME type via `finfo_file()`, and re-stored with randomized names
-- PHP execution is disabled in `/uploads/` via `.htaccess`
-- `config.php` should be in `.gitignore` — it contains database and encryption credentials
-- SMTP app passwords are encrypted at rest using `openssl_encrypt` with a key stored in `config.php`, not in the database
-- User-supplied `{{name}}` values are passed through `htmlspecialchars()` before insertion into HTML email bodies
-- Unsubscribe tokens are cryptographically random (64-character hex strings)
+- **Input Validation**: All uploads are verified by extension and MIME inspection via `finfo_file()`, stored with randomized filenames.
+- **Script Execution Disabled**: Direct PHP execution is strictly prevented in `/uploads/` via `.htaccess`.
+- **Encrypted Credentials**: SMTP app passwords are encrypted at rest using AES-256-CBC with `ENCRYPTION_KEY`.
+- **Injection Prevention**: Contact attributes (`{{name}}`, `{{email}}`) are escaped before injection into templates.
+- **Secure Unsubscribe**: Cryptographically generated 64-character tokens allow safe, single-click recipient opt-outs.

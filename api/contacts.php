@@ -12,12 +12,12 @@ switch ($method) {
             $row = $stmt->fetch();
             $row ? jsonResponse($row) : jsonResponse(['error' => 'Not found'], 404);
         }
-        $page  = max(1, (int)($_GET['page'] ?? 1));
-        $limit = min(500, max(1, (int)($_GET['limit'] ?? 100)));
+        $page   = max(1, (int)($_GET['page'] ?? 1));
+        $limit  = min(500, max(1, (int)($_GET['limit'] ?? 100)));
         $offset = ($page - 1) * $limit;
         $total  = $pdo->query('SELECT COUNT(*) FROM contacts')->fetchColumn();
-        $stmt   = $pdo->prepare('SELECT * FROM contacts ORDER BY created_at DESC LIMIT ? OFFSET ?');
-        $stmt->execute([$limit, $offset]);
+        $stmt   = $pdo->prepare('SELECT * FROM contacts ORDER BY created_at DESC LIMIT ' . (int)$limit . ' OFFSET ' . (int)$offset);
+        $stmt->execute();
         jsonResponse(['data' => $stmt->fetchAll(), 'total' => (int)$total, 'page' => $page, 'limit' => $limit]);
         break;
 
@@ -27,8 +27,8 @@ switch ($method) {
             jsonResponse(['error' => 'email required'], 400);
         }
 
-        // Generate unique unsubscribe token
-        $token = bin2hex(random_bytes(16));
+        // Generate unique unsubscribe token (64-char hex string)
+        $token = bin2hex(random_bytes(32));
 
         $stmt = $pdo->prepare('INSERT INTO contacts (email, name, custom_fields, unsubscribe_token)
                                VALUES (?, ?, ?, ?)
@@ -58,10 +58,33 @@ switch ($method) {
         break;
 
     case 'DELETE':
-        if (empty($_GET['id'])) jsonResponse(['error' => 'id required'], 400);
-        $stmt = $pdo->prepare('DELETE FROM contacts WHERE id = ?');
-        $stmt->execute([(int)$_GET['id']]);
-        jsonResponse(['success' => true]);
+        $data = json_decode(file_get_contents('php://input'), true);
+        $ids = [];
+
+        if (!empty($_GET['id'])) {
+            $ids[] = (int)$_GET['id'];
+        } elseif (!empty($_GET['ids'])) {
+            $ids = is_array($_GET['ids']) ? $_GET['ids'] : explode(',', (string)$_GET['ids']);
+        } elseif (!empty($data['ids']) && is_array($data['ids'])) {
+            $ids = $data['ids'];
+        } elseif (!empty($data['id'])) {
+            $ids[] = (int)$data['id'];
+        } elseif (is_array($data)) {
+            $ids = $data;
+        }
+
+        $ids = array_values(array_filter(array_map('intval', $ids), fn($v) => $v > 0));
+
+        if (empty($ids)) {
+            jsonResponse(['error' => 'id or ids required'], 400);
+        }
+
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $stmt = $pdo->prepare("DELETE FROM contacts WHERE id IN ($placeholders)");
+        $stmt->execute($ids);
+        $deleted = $stmt->rowCount();
+
+        jsonResponse(['success' => true, 'deleted' => $deleted]);
         break;
 
     default:

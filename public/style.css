@@ -16,8 +16,6 @@ body {
 /* ── Glassmorphism Panel ─────────────────────────────── */
 .glass {
   background: rgba(255, 255, 255, 0.04);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
   border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 14px;
   padding: 24px;
@@ -155,7 +153,6 @@ label {
   justify-content: space-between;
   padding: 16px 32px;
   background: rgba(255,255,255,0.02);
-  backdrop-filter: blur(10px);
   border-bottom: 1px solid rgba(255,255,255,0.04);
   position: sticky;
   top: 0;
@@ -348,7 +345,6 @@ tr:hover td {
   position: fixed;
   inset: 0;
   background: rgba(0,0,0,0.6);
-  backdrop-filter: blur(4px);
   z-index: 200;
   align-items: center;
   justify-content: center;
