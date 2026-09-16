@@ -86,6 +86,14 @@ if ($type === 'attachment') {
     }
 }
 
+// --- Sanitize SVG active content (XSS protection) ---
+if ($ext === 'svg' || str_contains($mimeType, 'svg')) {
+    $svgContent = file_get_contents($file['tmp_name']);
+    if (preg_match('/<script|javascript:|on\w+\s*=/i', $svgContent)) {
+        jsonResponse(['error' => 'SVG file contains prohibited scripts or active content'], 400);
+    }
+}
+
 // --- Generate safe stored filename ---
 $storedName = bin2hex(random_bytes(16)) . '.' . $ext;
 
