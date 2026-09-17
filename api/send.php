@@ -149,13 +149,16 @@ try {
     $mail->Body    = $body;
     $mail->AltBody = html_entity_decode(strip_tags(str_replace(['<br>','<br />','<br/>','</p>'], "\n", $body)), ENT_QUOTES, 'UTF-8');
 
-    // Attachments
+    // Attachments (verify path safety against path traversal)
+    $baseDir = realpath(__DIR__ . '/../uploads/attachments');
     $attStmt = $pdo->prepare('SELECT * FROM campaign_attachments WHERE campaign_id = ?');
     $attStmt->execute([$row['campaign_id']]);
     foreach ($attStmt->fetchAll() as $att) {
-        $fullPath = __DIR__ . '/../' . $att['file_path'];
-        if (file_exists($fullPath)) {
-            $mail->addAttachment($fullPath, $att['original_filename']);
+        $fullPath = realpath(__DIR__ . '/../' . $att['file_path']);
+        if ($fullPath !== false && $baseDir !== false && str_starts_with($fullPath, $baseDir . DIRECTORY_SEPARATOR)) {
+            if (file_exists($fullPath)) {
+                $mail->addAttachment($fullPath, $att['original_filename']);
+            }
         }
     }
 
