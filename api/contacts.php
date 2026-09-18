@@ -26,6 +26,9 @@ switch ($method) {
         if (empty($data['email'])) {
             jsonResponse(['error' => 'email required'], 400);
         }
+        if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+            jsonResponse(['error' => 'Invalid email format'], 400);
+        }
 
         // Generate unique unsubscribe token (64-char hex string)
         $token = bin2hex(random_bytes(32));
@@ -46,6 +49,9 @@ switch ($method) {
         $data = json_decode(file_get_contents('php://input'), true);
         if (empty($_GET['id']) || empty($data['email'])) {
             jsonResponse(['error' => 'id and email required'], 400);
+        }
+        if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+            jsonResponse(['error' => 'Invalid email format'], 400);
         }
         $stmt = $pdo->prepare('UPDATE contacts SET email=?, name=?, custom_fields=? WHERE id=?');
         $stmt->execute([
