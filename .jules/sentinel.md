@@ -1,4 +1,4 @@
-## 2025-09-17 - Path Traversal Prevention in Attachment File Handlers
-**Vulnerability:** File paths stored in `campaign_attachments.file_path` were directly passed to `unlink()` and `$mail->addAttachment()` without validating whether they remained within the intended `uploads/attachments/` directory.
-**Learning:** Even if uploaded filenames are randomized, database file path references could be manipulated or crafted if database integrity is compromised or if inputs bypass standard upload controllers.
-**Prevention:** Always sanitize and validate file paths using `realpath()` and check that the target canonical path starts with `$baseDir . DIRECTORY_SEPARATOR` before performing file system operations.
+## 2025-02-16 - Path Traversal Prevention in Email Attachments
+**Vulnerability:** `api/send.php` appended database-stored attachment file paths directly to the base directory without canonical path verification (`realpath`), allowing potential path traversal / arbitrary file attachments.
+**Learning:** Even when uploaded filenames are sanitized at upload time, DB entries or relative paths in file attachments can lead to Local File Inclusion if the resolved path is not constrained to the intended uploads directory.
+**Prevention:** Use `realpath()` and verify that the canonical path starts with `$allowedDir . DIRECTORY_SEPARATOR` before including or reading files from disk.
