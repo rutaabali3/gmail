@@ -1,4 +1,4 @@
-## 2026-03-30 - SVG Stored XSS via Asset Uploads
-**Vulnerability:** Uploading SVG images containing embedded `<script>` tags or event handlers (`onload=`, `onerror=`) permitted execution of arbitrary JavaScript when the SVG asset URL was rendered in browser context or media picker previews.
-**Learning:** Checking extension and MIME type alone (`image/svg+xml`) is insufficient for vector formats like SVG because valid SVGs can legally encapsulate script elements and event handler attributes that browsers execute.
-**Prevention:** Always inspect the raw file content of uploaded SVG files for active content patterns such as `<script`, `javascript:`, and `on\w+=` event handlers before storing them on disk.
+## 2025-02-16 - Path Traversal Prevention in Email Attachments
+**Vulnerability:** `api/send.php` appended database-stored attachment file paths directly to the base directory without canonical path verification (`realpath`), allowing potential path traversal / arbitrary file attachments.
+**Learning:** Even when uploaded filenames are sanitized at upload time, DB entries or relative paths in file attachments can lead to Local File Inclusion if the resolved path is not constrained to the intended uploads directory.
+**Prevention:** Use `realpath()` and verify that the canonical path starts with `$allowedDir . DIRECTORY_SEPARATOR` before including or reading files from disk.
