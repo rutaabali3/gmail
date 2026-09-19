@@ -26,6 +26,9 @@ switch ($method) {
         if (empty($data['email'])) {
             jsonResponse(['error' => 'email required'], 400);
         }
+        if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+            jsonResponse(['error' => 'Invalid email format'], 400);
+        }
 
         // Security: Validate email format to ensure data hygiene and prevent malformed headers/payloads
         if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
