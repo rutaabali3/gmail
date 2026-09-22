@@ -94,12 +94,15 @@ switch ($method) {
         if (empty($_GET['id'])) jsonResponse(['error' => 'id required'], 400);
         $pdo->beginTransaction();
         try {
-            // Delete attachment files from disk
+            // Delete attachment files from disk safely to prevent path traversal
+            $allowedDir = realpath(__DIR__ . '/../uploads/attachments');
             $attStmt = $pdo->prepare('SELECT file_path FROM campaign_attachments WHERE campaign_id = ?');
             $attStmt->execute([(int)$_GET['id']]);
             foreach ($attStmt->fetchAll() as $att) {
-                $fullPath = __DIR__ . '/../' . $att['file_path'];
-                if (file_exists($fullPath)) @unlink($fullPath);
+                $fullPath = realpath(__DIR__ . '/../' . $att['file_path']);
+                if ($fullPath !== false && is_file($fullPath) && $allowedDir !== false && str_starts_with($fullPath, $allowedDir . DIRECTORY_SEPARATOR)) {
+                    @unlink($fullPath);
+                }
             }
 
             $pdo->prepare('DELETE FROM campaign_attachments WHERE campaign_id = ?')->execute([(int)$_GET['id']]);
