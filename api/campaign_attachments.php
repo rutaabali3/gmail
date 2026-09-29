@@ -12,9 +12,12 @@ switch ($method) {
         $att = $stmt->fetch();
         if (!$att) jsonResponse(['error' => 'Not found'], 404);
 
-        // Delete file from disk
-        $fullPath = __DIR__ . '/../' . $att['file_path'];
-        if (file_exists($fullPath)) @unlink($fullPath);
+        // Security: Ensure path canonicalization prevents arbitrary file deletion outside uploads/attachments/
+        $allowedDir = realpath(__DIR__ . '/../uploads/attachments');
+        $resolvedPath = realpath(__DIR__ . '/../' . $att['file_path']);
+        if ($resolvedPath !== false && is_file($resolvedPath) && $allowedDir !== false && str_starts_with($resolvedPath, $allowedDir . DIRECTORY_SEPARATOR)) {
+            @unlink($resolvedPath);
+        }
 
         $pdo->prepare('DELETE FROM campaign_attachments WHERE id = ?')->execute([(int)$_GET['id']]);
         jsonResponse(['success' => true]);
