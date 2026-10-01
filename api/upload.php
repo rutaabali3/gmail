@@ -57,6 +57,22 @@ $finfo    = finfo_open(FILEINFO_MIME_TYPE);
 $mimeType = finfo_file($finfo, $file['tmp_name']);
 finfo_close($finfo);
 
+// --- SVG Content Validation to Prevent Stored XSS ---
+if ($ext === 'svg' || str_contains(strtolower($mimeType), 'svg')) {
+    $svgContent = file_get_contents($file['tmp_name']);
+    if ($svgContent !== false) {
+        // Reject if script tags, inline event handlers (e.g., onload=), javascript: protocols, or iframes exist
+        if (
+            preg_match('/<script[\s>]/i', $svgContent) ||
+            preg_match('/(?:\s|\/|<)on[a-z]+\s*=/i', $svgContent) ||
+            preg_match('/javascript\s*:/i', $svgContent) ||
+            preg_match('/<iframe[\s>]/i', $svgContent)
+        ) {
+            jsonResponse(['error' => 'SVG content contains forbidden script elements'], 400);
+        }
+    }
+}
+
 if ($type === 'attachment') {
     $allowedMimes = [
         'application/pdf',
