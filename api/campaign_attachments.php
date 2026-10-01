@@ -13,8 +13,11 @@ switch ($method) {
         if (!$att) jsonResponse(['error' => 'Not found'], 404);
 
         // Delete file from disk
-        $fullPath = __DIR__ . '/../' . $att['file_path'];
-        if (file_exists($fullPath)) @unlink($fullPath);
+        $allowedDir = realpath(__DIR__ . '/../uploads/attachments');
+        $fullPath   = realpath(__DIR__ . '/../' . $att['file_path']);
+        if ($fullPath !== false && is_file($fullPath) && $allowedDir !== false && str_starts_with($fullPath, $allowedDir . DIRECTORY_SEPARATOR)) {
+            @unlink($fullPath);
+        }
 
         $pdo->prepare('DELETE FROM campaign_attachments WHERE id = ?')->execute([(int)$_GET['id']]);
         jsonResponse(['success' => true]);
