@@ -17,10 +17,14 @@ switch ($method) {
         $asset = $stmt->fetch();
         if (!$asset) jsonResponse(['error' => 'Not found'], 404);
 
-        // Delete file from disk
+        // Delete file from disk (verify path is within allowed directory)
         $parsed = parse_url($asset['url']);
         $filePath = __DIR__ . '/../uploads/assets/' . basename($parsed['path']);
-        if (file_exists($filePath)) @unlink($filePath);
+        $allowedDir = realpath(__DIR__ . '/../uploads/assets');
+        $fullPath = realpath($filePath);
+        if ($fullPath !== false && is_file($fullPath) && $allowedDir !== false && str_starts_with($fullPath, $allowedDir . DIRECTORY_SEPARATOR)) {
+            @unlink($fullPath);
+        }
 
         $pdo->prepare('DELETE FROM assets WHERE id = ?')->execute([(int)$_GET['id']]);
         jsonResponse(['success' => true]);
