@@ -6,11 +6,19 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 $type = $_POST['type'] ?? ''; // 'attachment' or 'asset'
+if (!in_array($type, ['attachment', 'asset'], true)) {
+    jsonResponse(['error' => 'Invalid upload type'], 400);
+}
+
 $campaignId = isset($_POST['campaign_id']) ? (int)$_POST['campaign_id'] : 0;
 
 if ($type === 'asset') {
     $assetType = $_POST['asset_type'] ?? 'logo'; // logo, banner, footer
-    $label     = $_POST['label'] ?? 'Asset';
+    $allowedAssetTypes = ['logo', 'banner', 'footer'];
+    if (!in_array($assetType, $allowedAssetTypes, true)) {
+        jsonResponse(['error' => 'Invalid asset_type specified'], 400);
+    }
+    $label = $_POST['label'] ?? 'Asset';
 }
 
 if (empty($_FILES['file'])) {
