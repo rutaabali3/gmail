@@ -30,11 +30,6 @@ switch ($method) {
             jsonResponse(['error' => 'Invalid email format'], 400);
         }
 
-        // Security: Validate email format to ensure data hygiene and prevent malformed headers/payloads
-        if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
-            jsonResponse(['error' => 'Invalid email address format'], 400);
-        }
-
         // Generate unique unsubscribe token (64-char hex string)
         $token = bin2hex(random_bytes(32));
 
