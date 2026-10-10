@@ -72,9 +72,12 @@ if ($row['contact_status'] !== 'active') {
     jsonResponse(['success' => false, 'error' => 'Contact not active, skipped', 'skipped' => true]);
 }
 
-// Check recipient already sent
-if ($row['recipient_status'] === 'sent') {
-    jsonResponse(['success' => true, 'already_sent' => true]);
+// Check recipient status (must be pending)
+if ($row['recipient_status'] !== 'pending') {
+    if ($row['recipient_status'] === 'sent') {
+        jsonResponse(['success' => true, 'already_sent' => true]);
+    }
+    jsonResponse(['success' => false, 'error' => 'Recipient already processed: ' . $row['recipient_status'], 'already_processed' => true]);
 }
 
 // Enforce daily limit
