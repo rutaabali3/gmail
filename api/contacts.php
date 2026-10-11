@@ -26,13 +26,16 @@ switch ($method) {
         if (empty($data['email'])) {
             jsonResponse(['error' => 'email required'], 400);
         }
+
+        // Security: Validate email format and field lengths to prevent buffer / storage issues and malformed headers
         if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
             jsonResponse(['error' => 'Invalid email format'], 400);
         }
-
-        // Security: Validate email format to ensure data hygiene and prevent malformed headers/payloads
-        if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
-            jsonResponse(['error' => 'Invalid email address format'], 400);
+        if (strlen($data['email']) > 254) {
+            jsonResponse(['error' => 'Email exceeds maximum length of 254 characters'], 400);
+        }
+        if (!empty($data['name']) && strlen($data['name']) > 255) {
+            jsonResponse(['error' => 'Name exceeds maximum length of 255 characters'], 400);
         }
 
         // Generate unique unsubscribe token (64-char hex string)
@@ -56,9 +59,15 @@ switch ($method) {
             jsonResponse(['error' => 'id and email required'], 400);
         }
 
-        // Security: Validate email format to ensure data hygiene and prevent malformed headers/payloads
+        // Security: Validate email format and field lengths to prevent buffer / storage issues and malformed headers
         if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
-            jsonResponse(['error' => 'Invalid email address format'], 400);
+            jsonResponse(['error' => 'Invalid email format'], 400);
+        }
+        if (strlen($data['email']) > 254) {
+            jsonResponse(['error' => 'Email exceeds maximum length of 254 characters'], 400);
+        }
+        if (!empty($data['name']) && strlen($data['name']) > 255) {
+            jsonResponse(['error' => 'Name exceeds maximum length of 255 characters'], 400);
         }
 
         $stmt = $pdo->prepare('UPDATE contacts SET email=?, name=?, custom_fields=? WHERE id=?');
