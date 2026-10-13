@@ -61,7 +61,8 @@ switch ($method) {
             jsonResponse(['id' => $campaignId], 201);
         } catch (Throwable $e) {
             $pdo->rollBack();
-            jsonResponse(['error' => $e->getMessage()], 500);
+            error_log('Campaign creation failed: ' . $e->getMessage());
+            jsonResponse(['error' => 'Failed to create campaign'], 500);
         }
         break;
 
@@ -112,7 +113,8 @@ switch ($method) {
             jsonResponse(['success' => true]);
         } catch (Throwable $e) {
             $pdo->rollBack();
-            jsonResponse(['error' => $e->getMessage()], 500);
+            error_log('Campaign deletion failed: ' . $e->getMessage());
+            jsonResponse(['error' => 'Failed to delete campaign'], 500);
         }
         break;
 
