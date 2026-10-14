@@ -41,6 +41,9 @@ function getDB(): PDO {
 function jsonResponse($data, int $statusCode = 200): void {
     http_response_code($statusCode);
     header('Content-Type: application/json; charset=utf-8');
+    header('X-Content-Type-Options: nosniff');
+    header('X-Frame-Options: DENY');
+    header('Referrer-Policy: no-referrer');
     echo json_encode($data);
     exit;
 }
