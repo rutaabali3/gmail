@@ -3,6 +3,11 @@ require_once __DIR__ . '/../config.php';
 
 $token = $_GET['token'] ?? '';
 
+// Set HTTP Security Headers
+header('X-Content-Type-Options: nosniff');
+header('X-Frame-Options: DENY');
+header('Referrer-Policy: no-referrer');
+
 if (empty($token)) {
     http_response_code(400);
     echo '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">';
