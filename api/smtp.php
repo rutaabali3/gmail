@@ -21,13 +21,18 @@ switch ($method) {
         if (empty($data['label']) || empty($data['email']) || empty($data['app_password'])) {
             jsonResponse(['error' => 'label, email, app_password required'], 400);
         }
+        // Security: Validate SMTP email format to prevent storing invalid or malformed email addresses
+        if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+            jsonResponse(['error' => 'Invalid email address format'], 400);
+        }
+        $dailyLimit = isset($data['daily_limit']) ? max(1, (int)$data['daily_limit']) : 400;
         $encrypted = encrypt($data['app_password']);
         $stmt = $pdo->prepare('INSERT INTO smtp_accounts (label, email, app_password_encrypted, daily_limit) VALUES (?, ?, ?, ?)');
         $stmt->execute([
             $data['label'],
             $data['email'],
             $encrypted,
-            $data['daily_limit'] ?? 400,
+            $dailyLimit,
         ]);
         jsonResponse(['id' => (int)$pdo->lastInsertId()], 201);
         break;
@@ -36,13 +41,22 @@ switch ($method) {
         if (empty($_GET['id'])) jsonResponse(['error' => 'id required'], 400);
         $data = json_decode(file_get_contents('php://input'), true);
 
+        // Security: Validate SMTP email format if provided during update
+        if (array_key_exists('email', $data) && !filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+            jsonResponse(['error' => 'Invalid email address format'], 400);
+        }
+
         $fields = [];
         $params = [];
-        foreach (['label','email','daily_limit'] as $key) {
+        foreach (['label','email'] as $key) {
             if (array_key_exists($key, $data)) {
                 $fields[] = "$key = ?";
                 $params[] = $data[$key];
             }
+        }
+        if (array_key_exists('daily_limit', $data)) {
+            $fields[] = 'daily_limit = ?';
+            $params[] = max(1, (int)$data['daily_limit']);
         }
         if (array_key_exists('app_password', $data)) {
             $fields[] = 'app_password_encrypted = ?';
