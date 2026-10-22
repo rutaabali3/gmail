@@ -21,13 +21,17 @@ switch ($method) {
         if (empty($data['label']) || empty($data['email']) || empty($data['app_password'])) {
             jsonResponse(['error' => 'label, email, app_password required'], 400);
         }
+        // Security: Validate SMTP email format to prevent header injection or invalid credentials
+        if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+            jsonResponse(['error' => 'Invalid email address format'], 400);
+        }
         $encrypted = encrypt($data['app_password']);
         $stmt = $pdo->prepare('INSERT INTO smtp_accounts (label, email, app_password_encrypted, daily_limit) VALUES (?, ?, ?, ?)');
         $stmt->execute([
             $data['label'],
             $data['email'],
             $encrypted,
-            $data['daily_limit'] ?? 400,
+            (int)($data['daily_limit'] ?? 400),
         ]);
         jsonResponse(['id' => (int)$pdo->lastInsertId()], 201);
         break;
@@ -36,12 +40,16 @@ switch ($method) {
         if (empty($_GET['id'])) jsonResponse(['error' => 'id required'], 400);
         $data = json_decode(file_get_contents('php://input'), true);
 
+        if (array_key_exists('email', $data) && !filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+            jsonResponse(['error' => 'Invalid email address format'], 400);
+        }
+
         $fields = [];
         $params = [];
         foreach (['label','email','daily_limit'] as $key) {
             if (array_key_exists($key, $data)) {
                 $fields[] = "$key = ?";
-                $params[] = $data[$key];
+                $params[] = $key === 'daily_limit' ? (int)$data[$key] : $data[$key];
             }
         }
         if (array_key_exists('app_password', $data)) {
