@@ -480,7 +480,13 @@ if (tplPreviewToggleBtn) {
     if (!previewBox || !bodyTextarea) return;
     previewBox.classList.toggle('hidden');
     if (!previewBox.classList.contains('hidden')) {
-      previewBox.innerHTML = bodyTextarea.value || '<p class="text-muted" style="margin:0;">(Empty body)</p>';
+      // Security: Isolate and render user-supplied HTML inside a sandboxed iframe with srcdoc to prevent DOM XSS
+      const iframe = document.createElement('iframe');
+      iframe.style.cssText = 'width:100%;min-height:180px;border:none;background:#ffffff;border-radius:4px;';
+      iframe.sandbox = 'allow-same-origin';
+      iframe.srcdoc = bodyTextarea.value || '<p style="color:#64748b;margin:0;">(Empty body)</p>';
+      previewBox.innerHTML = '';
+      previewBox.appendChild(iframe);
     }
   });
 }
