@@ -480,7 +480,7 @@ if (tplPreviewToggleBtn) {
     if (!previewBox || !bodyTextarea) return;
     previewBox.classList.toggle('hidden');
     if (!previewBox.classList.contains('hidden')) {
-      previewBox.innerHTML = bodyTextarea.value || '<p class="text-muted" style="margin:0;">(Empty body)</p>';
+      previewBox.innerHTML = sanitizeHtml(bodyTextarea.value) || '<p class="text-muted" style="margin:0;">(Empty body)</p>';
     }
   });
 }
@@ -1055,6 +1055,26 @@ async function startSendingLoop(campaignId) {
 /* ─────────────────────────────────────────────────────────
    ── UTILITY
    ───────────────────────────────────────────────────────── */
+function sanitizeHtml(html) {
+  if (!html) return '';
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+  const forbiddenTags = ['script', 'iframe', 'object', 'embed', 'form', 'meta', 'link', 'style', 'base'];
+  forbiddenTags.forEach(tag => {
+    doc.querySelectorAll(tag).forEach(el => el.remove());
+  });
+  doc.querySelectorAll('*').forEach(el => {
+    Array.from(el.attributes).forEach(attr => {
+      const name = attr.name.toLowerCase();
+      const val  = attr.value.trim().toLowerCase();
+      if (name.startsWith('on') || val.startsWith('javascript:') || val.startsWith('data:text/html')) {
+        el.removeAttribute(attr.name);
+      }
+    });
+  });
+  return doc.body.innerHTML;
+}
+
 function esc(str) {
   if (!str) return '';
   const div = document.createElement('div');
