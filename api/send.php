@@ -171,12 +171,22 @@ try {
     jsonResponse(['success' => true]);
 
 } catch (Exception $e) {
-    $errorMsg = $mail->ErrorInfo ?: $e->getMessage();
+    $rawError = $mail->ErrorInfo ?: $e->getMessage();
 
+    // Log full error details in database for debugging
     $pdo->prepare('UPDATE campaign_recipients SET status=?, error_message=?, attempt_count=attempt_count+1 WHERE id=?')
-        ->execute(['failed', $errorMsg, $recipientId]);
+        ->execute(['failed', $rawError, $recipientId]);
     $pdo->prepare('INSERT INTO send_logs (campaign_recipient_id, status, response_snippet) VALUES (?, ?, ?)')
-        ->execute([$recipientId, 'failed', $errorMsg]);
+        ->execute([$recipientId, 'failed', $rawError]);
 
-    jsonResponse(['success' => false, 'error' => $errorMsg]);
+    // Security: Sanitize error response returned to client to prevent exposing internal stack traces or credentials
+    if (str_contains(strtolower($rawError), 'authenticate') || str_contains(strtolower($rawError), 'password') || str_contains(strtolower($rawError), 'auth')) {
+        $clientError = 'SMTP Authentication failed. Please check credentials.';
+    } elseif (str_contains(strtolower($rawError), 'connect') || str_contains(strtolower($rawError), 'timeout')) {
+        $clientError = 'Failed to connect to SMTP server.';
+    } else {
+        $clientError = 'Email dispatch failed. Check send logs for details.';
+    }
+
+    jsonResponse(['success' => false, 'error' => $clientError]);
 }
