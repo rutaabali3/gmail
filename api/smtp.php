@@ -18,8 +18,19 @@ switch ($method) {
 
     case 'POST':
         $data = json_decode(file_get_contents('php://input'), true);
+        if (!is_array($data)) {
+            jsonResponse(['error' => 'Invalid JSON payload'], 400);
+        }
         if (empty($data['label']) || empty($data['email']) || empty($data['app_password'])) {
             jsonResponse(['error' => 'label, email, app_password required'], 400);
+        }
+        // Security: Validate email format to prevent storing malformed or dangerous email addresses
+        if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+            jsonResponse(['error' => 'Invalid email address format'], 400);
+        }
+        $dailyLimit = isset($data['daily_limit']) ? (int)$data['daily_limit'] : 400;
+        if ($dailyLimit < 1) {
+            jsonResponse(['error' => 'daily_limit must be a positive integer'], 400);
         }
         $encrypted = encrypt($data['app_password']);
         $stmt = $pdo->prepare('INSERT INTO smtp_accounts (label, email, app_password_encrypted, daily_limit) VALUES (?, ?, ?, ?)');
@@ -27,7 +38,7 @@ switch ($method) {
             $data['label'],
             $data['email'],
             $encrypted,
-            $data['daily_limit'] ?? 400,
+            $dailyLimit,
         ]);
         jsonResponse(['id' => (int)$pdo->lastInsertId()], 201);
         break;
@@ -35,6 +46,21 @@ switch ($method) {
     case 'PUT':
         if (empty($_GET['id'])) jsonResponse(['error' => 'id required'], 400);
         $data = json_decode(file_get_contents('php://input'), true);
+        if (!is_array($data)) {
+            jsonResponse(['error' => 'Invalid JSON payload'], 400);
+        }
+
+        // Security: Validate email format if provided
+        if (array_key_exists('email', $data) && !filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+            jsonResponse(['error' => 'Invalid email address format'], 400);
+        }
+        if (array_key_exists('daily_limit', $data)) {
+            $dailyLimit = (int)$data['daily_limit'];
+            if ($dailyLimit < 1) {
+                jsonResponse(['error' => 'daily_limit must be a positive integer'], 400);
+            }
+            $data['daily_limit'] = $dailyLimit;
+        }
 
         $fields = [];
         $params = [];
